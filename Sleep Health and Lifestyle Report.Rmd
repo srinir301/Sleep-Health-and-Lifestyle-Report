@@ -1,0 +1,294 @@
+---
+title: "Sleep Health and Lifestyle Report"
+subtitle: "Analyzing Factors Affecting Sleep and Certain Lifestyles"
+author: "Srinivasan Ramakrishnan"
+date: '`r Sys.Date()`'
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+geometry: margin = 0.5in
+bibliography: Kaggle 2024 Citation.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+options(scipen = 999)
+```
+
+```{r preliminaries, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(ggthemes)
+library(skimr)
+library(ggridges)
+library(cowplot)
+sleep <- read.csv("Sleep_health_and_lifestyle_dataset.csv", stringsAsFactors = TRUE)
+skim(sleep)
+```
+
+```{r Data Cleaning, message=FALSE, warning=FALSE, include=FALSE}
+sleep <- sleep %>%
+  separate(Blood.Pressure, c("Systolic.BP", "Diastolic.BP"), "/")
+
+sleep$Systolic.BP <- as.integer(sleep$Systolic.BP)
+sleep$Diastolic.BP <- as.integer(sleep$Diastolic.BP)
+sleep$Occupation <- as.character(sleep$Occupation)
+
+sleep <- sleep %>%
+  mutate(
+    BMI.Category = ifelse(BMI.Category == "Normal" | BMI.Category == "Normal Weight", "Normal",
+           ifelse(BMI.Category == "Overweight", "Overweight",
+                  ifelse(BMI.Category == "Obese", "Obese", NA)))
+  )
+
+sleep$BMI.Category <- factor(sleep$BMI.Category, levels = c("Normal", "Overweight", "Obese"))
+
+levels(sleep$BMI.Category)
+levels(sleep$Sleep.Disorder)
+```
+
+\newpage
+
+# Executive Summary
+
+## About the Data
+
+The data set includes variables that can affect how long someone sleeps such as the amount of stress, heart rate, blood pressure, and sleeping disorder. The data set was made for data visualization and analysis on sleep related variables (sleep duration or sleep quality), lifestyle factors (physical activity and stress, for example), cardiovascular related health (blood pressure and heart rate), and sleep disorders. This data set was pulled from Kaggle.com and the data was artificially made with no sources, as mentioned by the author of the data set. The data set has 374 rows of data and 13 variables (scroll all the way to the bottom for a citation of the data set). There were no missing values, but there were some variables that needed to have the datatype altered. The BMI.Category variable had four categories of Body Mass Index and I combined two categories to make three categories for the variable. Here are some descriptions for the less clear variables:
+
+-   **Sleep.Duration:** Hours of sleep per day.
+-   **Quality.of.Sleep and Stress.Level:** Rating from 1 to 10 for both quality of sleep and stress level for each person.
+-   **Physical.Activity.Level:** Minutes of physical activity per day.
+-   **Blood.Pressure:** Blood pressure when heart is not resting, systolic, over blood pressure when heart is resting, diastolic. Systolic and diastolic pressure were split into two different variables.
+-   **Heart.Rate:** Beats per Minute (BPM) heart rate.
+-   **Sleep Disorder:** Two sleep disorders, sleep apnea and insomnia. Sleep apnea is when breathing stops when sleeping and insomnia is when a person cannot sleep or stay asleep.
+
+## Findings
+
+The client had eight questions and here are the conclusions I arrived to from the eight questions:
+
+1.  Does age affect the amount of sleep a person gets per day?
+    -   **Conclusion 1:** People who are in their late 20s get the least amount of sleep and people in their late 50s get the most amount of sleep which makes sense because the older a person gets the more they get tired.
+2.  Which occupation, on average, has the lowest duration of sleep per day?
+    -   **Conclusion 2:** Sales representatives, salespersons, and scientists have the lowest hours of sleep because those jobs, generally, require more hours work per day.
+3.  Does a person's body mass type or gender affect their hours of sleep per day?
+    -   **Conclusion 3:** Between genders, the hours of sleep does not vary much, but the hours of sleep do vary between the body mass of a person because people who are normal in weight sleep more to make their body healthier compared to people who are obese or overweight.
+4.  Does duration of sleep vary between sleep disorders?
+    -   **Conclusion 4:** Yes, the hours of sleep do vary by sleep disorders because people with sleep apnea can sleep, but they can wake up at anytime which makes it random and people with insomnia cannot sleep or stay asleep which causes them to have low hours of sleep.
+5.  Does a person's type of sleep disorder along with their Body Mass Index type affect the average amount of hours they sleep?
+    -   **Conclusion 5:** It does not vary much with people who have sleep apnea, but it does vary among people with insomnia because people who are obese or overweight do not sleep as much which makes them less healthy and if the person also has insomnia it will subtract the hours of sleep even more.
+6.  Which occupation gets the most stress and does it vary by gender?
+    -   **Conclusion 6:** For women, being a nurse is the most stressful job and, for men, being a doctor is the most stressful job. This makes sense because these jobs are known to have intense working conditions and people's lives are at hand.
+7.  What is the most common sleep duration of a person?
+    -   **Conclusion 7:** The most common sleep duration of a person is between 7 to 7.5 hours of sleep per day.
+8.  Do people with different Body Mass Index types vary in physical activity?
+    -   **Conclusion 8:** The actual average physical activity does not vary by body mass, but the range of minutes for physical activity varies a lot.
+
+\newpage
+
+# Question 1
+
+**Does age affect the amount of sleep a person gets per day?**
+
+## Description of Graph
+
+Scatterplot showing the correlation between age and the amount of sleep, in hours, they get per day with linear regression smoothing
+
+## Analysis
+
+The scatter plot below shows that ages of people from the data set on the x-axis from the late 20s to the late 50s and the hours of sleep people in this age range get per day on the y-axis. This is no direct linear correlation between age and hours of sleep per day, but people in their late 20s get the least amount of sleep and people in their late 50s get the most amount of sleep as seen with the linear regression line.
+
+```{r Question 1, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(sleep, aes(x = Age, y = Sleep.Duration)) + geom_point(size = 2, alpha = 0.2) + geom_smooth(method = "lm") + ylim(0,9) + xlim(0,60) + labs(x = "Age (27 to 59)", y = "Hours\nof\nSleep\nper Day", title = "The Hours of Sleep per day People get by Age", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") + theme(axis.title.y = element_text(angle = 0, vjust = 0.5), plot.title = element_text(size = 18))
+
+```
+
+\newpage
+
+# Question 2
+
+**Which occupation, on average, has the lowest duration of sleep per day?**
+
+## Description of Graph
+
+Bar chart showing the average hours of sleep per day by occupation (11 occupations).
+
+## Analysis
+
+The bar chart depicts the average hours of sleep per day on the x-axis and the 11 occupations on the y-axis. On average, people with sales representative, salesperson, and scientist jobs have the lowest hours of sleep at around 6 hours of sleep per day and engineers have the highest hours of sleep at around 8 hours of sleep per day.
+
+```{r Question 2, echo=FALSE, message=FALSE, warning=FALSE}
+avg.sleep <- sleep %>%
+  group_by(Occupation) %>%
+  summarize(
+    avg_hour = round(mean(Sleep.Duration), 0)
+  )
+
+ggplot(avg.sleep, aes(x = reorder(Occupation, -avg_hour), y = avg_hour)) + geom_bar(stat = "identity", fill = "lightgreen") + coord_flip() + labs(x = "Occupation", y = "Average Hours of Sleep per Day", title = "Average Hours of Sleep per Day by\nOccupation", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") + theme(axis.title.y = element_text(angle = 0, vjust = 0.5), legend.position = "none", plot.title = element_text(size = 18)) + geom_text(aes(label = avg_hour), hjust = 1.2)
+
+```
+
+\newpage
+
+# Question 3
+
+**Does a person's body mass type or gender affect their hours of sleep per day?**
+
+## Description of Graph
+
+Two boxplots side by side with one showing the hours of sleep per day range by gender and the other showing the hours of sleep range per day by three Body Mass Index (BMI) categories
+
+## Analysis
+
+Both boxplots show the range for the hours of sleep per day on the y-axis. The left boxplot has the gender, male and female, on the x-axis and the right boxplot has the three Body Mass Index (BMI) categories on the x-axis (normal, overweight, and obese). The median hours of sleep per day is not different between male and females, but females have a higher range for hours of sleep they get per day compared to males. People with normal weight have higher hours of sleep per day than the other two weight classes. Obese as well as over weight people have lower hours of sleep per day with obese people having a longer range of hours for the amount of sleep they get per day compared to overweight people. Three overweight people have unusually high hours of sleep per day and one normal weighted person has an unusually low hours of sleep per day.
+
+```{r Question 3, echo=FALSE, message=FALSE, warning=FALSE}
+bmi <- ggplot(sleep, aes(x = BMI.Category, y = Sleep.Duration, fill = BMI.Category)) + geom_boxplot() +
+  labs(x = "Body Mass Index (BMI) Category", y = "Hours\nof Sleep\nper Day", title = "Hours of Sleep per Day\nRange based on Body Mass\nIndex Type", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") +
+  theme(axis.title.y = element_blank(), legend.position = "none", plot.title = element_text(size = 16)) +
+  annotate(geom = "rect", xmin = 1.9, xmax = 2.1, ymin = 7.9, ymax = 8.3, fill = "red", alpha = 0.2) +
+  annotate(geom = "text", x = 2.2, y = 8.1, label = "High hours of\nsleep for the\noverweight\ncategory", hjust = 0, size = 2.6) + annotate(geom = "rect", xmin = 0.95, xmax = 1.05, ymin = 5.9, ymax = 6.1, fill = "blue", alpha = 0.2) +
+  annotate(geom = "text", x = 1.1, y = 5.95, label = "Low hours of\nsleep for the\nnormal weight\ncategory", hjust = 0, size = 2.4)
+
+gender <- ggplot(sleep, aes(x = Gender, y = Sleep.Duration, fill = Gender)) + geom_boxplot() +
+  labs(x = "Gender", y = "Hours\nof Sleep\nper Day", title = "Hours of Sleep per Day\nRange based on Gender", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5), legend.position = "none", plot.title = element_text(size = 16))
+
+plot_grid(gender, bmi)
+
+```
+
+\newpage
+
+# Question 4
+
+**Does duration of sleep vary between sleep disorders?**
+
+## Description of Graph
+
+A density ridges plot showing the distribution for hours of sleep per day by two sleep disorders, insomnia and sleep apnea, with the mean and standard deviation.
+
+## Analysis
+
+The density ridge plot depicts the two sleeping disorders, sleep apnea and insomnia, on the y-axis and the hours of sleep per day on the x-axis. Yes, the duration of sleep varies between sleeping disorders because people with insomnia tend to sleep between 6 to 7 hours and people with sleep apnea tend to either sleep between 5.5 to 6.5 or 7.5 to 8.5 hours. It is more common for people with insomnia to sleep between 6 to 7 hours then a person with sleep apnea who sleeps between 5.5 to 6.5 hours. People with sleep apnea have longer sleeps, on average, than people with insomnia and vary more on hours of sleep per day than people with insomnia.
+
+```{r Question 4, echo=FALSE, message=FALSE, warning=FALSE}
+filter.sleep <- sleep %>%
+  filter(Sleep.Disorder != "None")
+
+ggplot(filter.sleep, aes(x = Sleep.Duration, y = Sleep.Disorder, fill = Sleep.Disorder)) + geom_density_ridges() +
+  stat_summary(fun.data = "mean_se",
+               geom = "pointrange",
+               width = 1,
+               colour = "black",
+               position = position_nudge(y = .5)) +
+  theme_ridges() +
+  labs(x = "Hours of Sleep per Day", y = "Sleep\nDisorders", title = "Distribution for Hours of Sleep per\nDay by Sleep Disorders", subtitle = "Points and lines are mean +/- standard deviation", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5), axis.title.x = element_text(hjust = 0.5), legend.position = "none", plot.title = element_text(size = 18), plot.caption = element_text(size = 8))
+```
+
+\newpage
+
+# Question 5
+
+Does a person's type of sleep disorder along with their Body Mass Index type affect the average amount of hours they sleep?
+
+## Description of Graph
+
+Bar charts showing the average hours of sleep per day by the type of sleep disorder with each bar chart having different Body Mass Index types.
+
+## Analysis
+
+The dodged bar chart has the average hours of sleep per day on the y-axis and the type of sleep disorder on the x-axis with standard error bars for each sleeping disorder along with the Body Mass Index category. People who have sleep apnea with normal weight have less hours of sleep per day, on average, compared to people who have insomnia with normal weight. People with insomnia who are either over weight or obese have less hours of sleep per day, on average, compared to people with sleep apnea who are either over weight or obese.
+
+```{r Question 5, echo=FALSE, message=FALSE, warning=FALSE}
+sleep %>%
+  filter(Sleep.Disorder != "None") %>%
+  group_by(BMI.Category, Sleep.Disorder) %>%
+  summarize(
+    avg_disorder = round(mean(Sleep.Duration), 2),
+    sd_disorder = round(sd(Sleep.Duration), 2)
+  ) %>%
+  ggplot(aes(x = reorder(BMI.Category, -avg_disorder), y = avg_disorder, fill = Sleep.Disorder)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_errorbar(aes(y = avg_disorder, ymin = avg_disorder - sd_disorder, ymax = avg_disorder + sd_disorder), position = position_dodge(width = 0.9), width = 0.5, color = "black") +
+  labs(x = "Body Mass Index (BMI) Category", y = "Average\nhours\nof Sleep\nper Day", title = "Average Hours of Sleep per Day by Sleep Disorder\nand Body Mass Index Type", fill = "Type of\nSleep Disorder", subtitle = "The lines are Mean +/- Standard Error", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") + theme_minimal() + theme(axis.title.y = element_text(angle = 0, vjust = 0.5), plot.title = element_text(size = 18), legend.background = element_rect(fill = "white"), legend.title = element_text(hjust = 0.5))
+```
+
+\newpage
+
+# Question 6
+
+Which occupation gets the most stress and does it vary by gender?
+
+## Description of Graph
+
+A faceted strip chart showing the stress level rating, from 1 to 10, by occupation faceted by gender for each person. The more observations for a stress level rating the bigger the dot will be.
+
+## Analysis
+
+The faceted strip chart has the stress level rating from 1 to 10 on the x-axis and the 11 occupations on the y-axis with two graphs separated by the gender. Woman who are nurses tend to be the most stressed and men who are doctors tend to be more stressed because the graph shows there are a large amount of observations showing a stress level greater than 7.5 for female nurses and male doctors. There is not enough data to know if male sales representatives or women scientist tend to be more stressed than other occupations.
+
+```{r Question 6, echo=FALSE, message=FALSE, warning=FALSE}
+sleep %>%
+  group_by(Stress.Level, Occupation, Gender) %>%
+  summarize(
+    count_stress = n()
+  ) %>%
+ggplot(aes(x = Stress.Level, y = Occupation, size = count_stress)) + geom_jitter(position = position_jitter(height = 0, width = 0.05), color = "blue") + facet_wrap(~Gender) + xlim(0,10) + labs(x = "Stress Level (1 to 10)", title = "Stress Level based on Occupation and\nGender", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") + theme(axis.title.y = element_text(angle = 0, vjust = 0.5), legend.position = "none", plot.title = element_text(size = 18))
+```
+
+\newpage
+
+# Question 7
+
+What is the most common sleep duration of a person?
+
+## Description of Graph
+
+A histogram showing the frequency for the hours of sleep people get per day.
+
+## Analysis
+
+The histogram has the hours of sleep per day on the x-axis and the number of people who sleep that many hours on the y-axis. Between 7 to 7.5 hours is the most frequent hours of sleep people get per day and second is around 6 hours of sleep per day. Not many people sleep more than 8 hours and less than 6 hours per day.
+
+```{r Question 7, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(sleep, aes(x = Sleep.Duration)) + geom_histogram(fill = "lightblue", color = "black") +
+  labs(x = "Hours of Sleep per Day", y = "Frequency", title = "Frequency for the Number of Hours People Sleep\nper Day", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5), plot.title = element_text(size = 18))
+```
+
+\newpage
+
+# Question 8
+
+Do people with different Body Mass Index types vary in physical activity?
+
+## Description of Graph
+
+A boxplot depicting the range of physical activity per day in minutes by Body Mass Index with the point range of the mean and standard deviation.
+
+## Analysis
+
+The boxplot shows the Body Mass Index (BMI) type on the x-axis and the minutes of physical activity per day on the y-axis. Normal weighted people have the most amount of physical activity as well the most range for how many minutes of physical activity they do per day. Obese people tend to have the least amount of physical activity per day and overweight people do a greater amount physical activity per day on average than the other two Body Mass Index categories.
+
+```{r Question 8, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(filter.sleep, aes(x = BMI.Category, y = Physical.Activity.Level, fill = BMI.Category)) + geom_boxplot() +
+  labs(x = "Body Mass Index (BMI) Category", y = "Physical\nExercise\nper Day\n(Minutes)", title = "Range of Physical Exercise per Day in Minutes by\nBody Mass Index Type", subtitle = "Points and lines are mean +/- standard deviation", caption = "Source: Sleep Health and Lifestyle Dataset (Kaggle)") +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5), legend.position = "none", plot.title = element_text(size = 16)) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", color = "purple", position = position_nudge(x = -.5))
+
+```
+
+\newpage
+
+# Conclusion
+
+The sample size of this data set is relatively small which means that these findings may not be the most accurate, but the findings do seem logical. This report can help people understand the many factors that affect sleep duration as well as some of the factors that do not affect sleep duration. This report gives a better understanding for the associations of some variables to stress levels, physical activity, sleep disorders, and quality of sleep.
+
+# Dataset Citation
+
+[@Kaggle2024]
